@@ -1,13 +1,25 @@
-import { Text, View } from 'react-native';
-
+// App.tsx (known-good)
+import 'react-native-gesture-handler';
 import './global.css';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Welcome from '(onboard)/1-welcome';
+import Next from '(onboard)/2-next';
+
+export type RootStackParamList = { Welcome: undefined; Next: undefined };
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-thin">are you ready to</Text>
-      <Text className="text-3xl font-bold ">breakfree</Text>
-      <Text className="mt-10 text-xl font-thin">yes</Text>
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Welcome" component={Welcome} />
+        <Stack.Screen
+          name="Next"
+          component={Next}
+          options={{ presentation: 'transparentModal', animation: 'fade' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
