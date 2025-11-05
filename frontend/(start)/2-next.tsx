@@ -1,9 +1,9 @@
-// src/screens/Next.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated, Easing } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { StatusBar } from 'expo-status-bar';
+import { Link } from '@react-navigation/native';
 
 export default function Next() {
   const titleY = useRef(new Animated.Value(0)).current;
@@ -65,9 +65,11 @@ export default function Next() {
           color: '#fff',
           fontSize: 16,
           fontWeight: '300',
+          textAlign: 'center',
+          marginHorizontal: '16',
           transform: [{ translateY: titleY }],
         }}>
-        Clarity, not doomscroll.
+        block the noise, keep the texts
       </Animated.Text>
 
       <Animated.View
@@ -88,9 +90,9 @@ export default function Next() {
           />
         )}
 
-        <Pressable onPress={() => {}} style={{ alignItems: 'center', marginTop: 16 }}>
+        <Pressable onPress={() => {}} style={{ alignItems: 'center', marginTop: 12 }}>
           <Text style={{ color: '#9CA3AF', fontSize: 12 }}>
-            By signing in, you agree to our Terms and Conditions
+            By signing in, you agree to our <Link href="/">Terms and Conditions</Link>
           </Text>
         </Pressable>
       </Animated.View>

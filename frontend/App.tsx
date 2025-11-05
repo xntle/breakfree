@@ -1,10 +1,9 @@
-// App.tsx (known-good)
 import 'react-native-gesture-handler';
 import './global.css';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Welcome from '(onboard)/1-welcome';
-import Next from '(onboard)/2-next';
+import Welcome from '(start)/1-welcome';
+import Next from '(start)/2-next';
 
 export type RootStackParamList = { Welcome: undefined; Next: undefined };
 const Stack = createNativeStackNavigator<RootStackParamList>();
