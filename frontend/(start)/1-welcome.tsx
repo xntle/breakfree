@@ -1,4 +1,3 @@
-// Welcome.tsx
 import { View, Animated, Easing, Pressable, Text } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -59,7 +58,6 @@ export default function Welcome() {
     ]).start();
   }, [screenOpacity, yesOpacity, yesScale]);
 
-  // Hold-to-navigate
   const HOLD_MS = 2000;
   const circleScale = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,7 +97,6 @@ export default function Welcome() {
 
   return (
     <Animated.View style={{ flex: 1, backgroundColor: '#FFFFFF', opacity: screenOpacity }}>
-      {/* Header copy (absolute; you can tweak TOP_OFFSET) */}
       <View
         style={{ position: 'absolute', top: TOP_OFFSET, left: 0, right: 0, alignItems: 'center' }}>
         <Animated.Text {...a} style={{ color: '#000000', fontSize: 24, fontWeight: '300' }}>
@@ -117,7 +114,6 @@ export default function Welcome() {
         </Animated.Text>
       </View>
 
-      {/* Dead-center hold target */}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Animated.View
           pointerEvents="none"
@@ -133,7 +129,7 @@ export default function Welcome() {
         <Pressable onPressIn={startHold} onPressOut={cancelHold}>
           <Animated.Text
             {...c}
-            style={{ color: pressed ? '#FFFFFF' : '#000000', fontSize: 20, fontWeight: '300' }}>
+            style={{ color: pressed ? '#FFFFFF' : '#000000', fontSize: 24, fontWeight: '300' }}>
             yes
           </Animated.Text>
         </Pressable>
