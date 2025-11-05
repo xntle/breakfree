@@ -14,11 +14,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Welcome" component={Welcome} />
-        <Stack.Screen
-          name="Next"
-          component={Next}
-          options={{ presentation: 'transparentModal', animation: 'fade' }}
-        />
+        <Stack.Screen name="Next" component={Next} options={{ animation: 'fade' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
