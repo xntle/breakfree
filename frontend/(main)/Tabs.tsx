@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Home, MessageCircle } from 'lucide-react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 import HomeScreen from './screens/Home';
 import MessagesStack from './screens/messages/MessagesStack';
@@ -14,34 +14,21 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function GradientBackground() {
-  return (
-    <View style={styles.gradientContainer}>
-      <LinearGradient
-        colors={[
-          'rgba(32, 31, 31, 0)',
-          'rgba(32, 31, 31, 0.3)',
-          'rgba(32, 31, 31, 0.7)',
-          '#201f1f',
-        ]}
-        locations={[0, 0.3, 0.7, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-    </View>
-  );
+function TabBarBackground() {
+  return <View style={[styles.gradientContainer, { backgroundColor: '#000000' }]} />;
 }
 
 export default function MainTabs() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarBackground: () => <GradientBackground />,
-        tabBarActiveTintColor: '#ede9e9',
-        tabBarInactiveTintColor: '#666',
+        tabBarBackground: () => <TabBarBackground />,
+        tabBarActiveTintColor: theme.colors.text,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
         tabBarShowLabel: false,
       }}>
       <Tab.Screen
@@ -84,7 +71,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: 68,
-    backgroundColor: '#201f1f',
     overflow: 'hidden',
   },
 });

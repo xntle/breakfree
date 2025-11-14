@@ -47,6 +47,7 @@ import {
 } from '@expo-google-fonts/open-sans';
 
 import { OnboardProvider } from '(onboard)/OnboardingContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Welcome from '(start)/1-welcome';
 import Intro from '(onboard)/steps/1-intro';
 import Access from '(onboard)/steps/2-access';
@@ -56,6 +57,7 @@ import Mode from '(onboard)/steps/5-mode';
 import Summary from '(onboard)/steps/6-summary';
 import Next from '(start)/2-next';
 import MainTabs from '(main)/Tabs';
+import Me from '(main)/screens/Me';
 
 export type RootStackParamList = {
   Next: undefined;
@@ -69,6 +71,7 @@ export type RootStackParamList = {
   Summary: undefined;
   // Main app
   Main: undefined;
+  Me: undefined;
 };
 
 export type RootNav = NativeStackNavigationProp<RootStackParamList>;
@@ -109,22 +112,25 @@ export default function App() {
   if (!ready || !fontsLoaded) return null; // splash could go here
 
   return (
-    <OnboardProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' } }}
-          initialRouteName={done ? 'Main' : 'Welcome'}>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="Welcome" component={Welcome} />
-          <Stack.Screen name="Intro" component={Intro} />
-          <Stack.Screen name="Next" component={Next} />
-          <Stack.Screen name="Access" component={Access} />
-          <Stack.Screen name="Distractions" component={Distractions} />
-          <Stack.Screen name="Messaging" component={Messaging} />
-          <Stack.Screen name="Mode" component={Mode} />
-          <Stack.Screen name="Summary" component={Summary} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </OnboardProvider>
+    <ThemeProvider>
+      <OnboardProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' } }}
+            initialRouteName={done ? 'Main' : 'Welcome'}>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Me" component={Me} />
+            <Stack.Screen name="Welcome" component={Welcome} />
+            <Stack.Screen name="Intro" component={Intro} />
+            <Stack.Screen name="Next" component={Next} />
+            <Stack.Screen name="Access" component={Access} />
+            <Stack.Screen name="Distractions" component={Distractions} />
+            <Stack.Screen name="Messaging" component={Messaging} />
+            <Stack.Screen name="Mode" component={Mode} />
+            <Stack.Screen name="Summary" component={Summary} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </OnboardProvider>
+    </ThemeProvider>
   );
 }

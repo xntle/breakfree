@@ -111,7 +111,7 @@ export default function Insights() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   scrollContent: {
     padding: 20,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',
-    color: '#201f1f',
+    color: '#050505',
   },
   distractionContent: {
     flex: 1,

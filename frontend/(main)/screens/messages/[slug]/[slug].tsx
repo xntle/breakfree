@@ -1,8 +1,19 @@
 import * as React from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Send, MessageCircle, MessageSquare, ArrowLeft } from 'lucide-react-native';
+import { useTheme } from '../../../../contexts/ThemeContext';
 import type { MessagesStackParamList } from '../MessagesStack';
 
 type ChatMessage = {
@@ -61,9 +72,11 @@ type RouteParams = {
 };
 
 export default function MessageDetail() {
+  const { theme } = useTheme();
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<MessagesStackParamList>>();
   const { slug } = (route.params as RouteParams) || { slug: '' };
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   const conversation = React.useMemo(
     () => MOCK_CONVERSATIONS.find((conv) => conv.id === slug),
@@ -72,6 +85,184 @@ export default function MessageDetail() {
 
   const conversationName = conversation?.name || slug;
   const conversationPlatform = conversation?.platform || 'iMessage';
+
+  const getPlatformIcon = (platform: string) => {
+    const platformLower = platform.toLowerCase();
+    if (platformLower.includes('imessage') || platformLower.includes('message')) {
+      return <MessageCircle size={20} color={theme.colors.text} strokeWidth={2.5} />;
+    }
+    if (platformLower.includes('whatsapp')) {
+      return <MessageSquare size={20} color={theme.colors.text} strokeWidth={2.5} />;
+    }
+    if (platformLower.includes('telegram')) {
+      return <MessageCircle size={20} color={theme.colors.text} strokeWidth={2.5} />;
+    }
+    return <MessageCircle size={20} color={theme.colors.text} strokeWidth={2.5} />;
+  };
+
+  // Generate dynamic styles based on theme
+  const dynamicStyles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        },
+        keyboardAvoid: {
+          flex: 1,
+        },
+        chatHeader: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: theme.colors.background,
+        },
+        backButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: theme.colors.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        chatHeaderCenter: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flex: 1,
+          justifyContent: 'center',
+          gap: 12,
+        },
+        avatar: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: theme.colors.surfaceSecondary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        avatarText: {
+          fontSize: 18,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+        },
+        chatHeaderInfo: {
+          alignItems: 'flex-start',
+        },
+        chatHeaderName: {
+          fontSize: 16,
+          fontWeight: '700',
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+        },
+        chatHeaderPlatform: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+          marginTop: 2,
+        },
+        platformIconContainer: {
+          width: 40,
+          height: 40,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        messagesContainer: {
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        },
+        messagesContent: {
+          padding: 16,
+          paddingBottom: 20,
+        },
+        messageRow: {
+          marginBottom: 12,
+          flexDirection: 'row',
+        },
+        messageRowSent: {
+          justifyContent: 'flex-end',
+        },
+        messageRowReceived: {
+          justifyContent: 'flex-start',
+        },
+        messageBubble: {
+          maxWidth: '75%',
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 18,
+        },
+        messageBubbleSent: {
+          backgroundColor: theme.colors.text,
+          borderBottomRightRadius: 4,
+        },
+        messageBubbleReceived: {
+          backgroundColor: theme.colors.surface,
+          borderBottomLeftRadius: 4,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        messageText: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Regular',
+          lineHeight: 20,
+          marginBottom: 4,
+        },
+        messageTextSent: {
+          color: theme.colors.background,
+        },
+        messageTextReceived: {
+          color: theme.colors.text,
+        },
+        messageTime: {
+          fontSize: 11,
+          fontFamily: 'OpenSans-Regular',
+          alignSelf: 'flex-end',
+        },
+        messageTimeSent: {
+          color: theme.colors.background,
+          opacity: 0.7,
+        },
+        messageTimeReceived: {
+          color: theme.colors.textSecondary,
+        },
+        inputContainer: {
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: theme.colors.background,
+          gap: 12,
+        },
+        input: {
+          flex: 1,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: 20,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          fontSize: 16,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.text,
+          maxHeight: 100,
+          backgroundColor: theme.colors.surface,
+        },
+        sendButton: {
+          backgroundColor: theme.colors.text,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        sendButtonDisabled: {
+          backgroundColor: theme.colors.surfaceSecondary,
+          opacity: 0.5,
+        },
+      }),
+    [theme]
+  );
+
   const [messageText, setMessageText] = React.useState('');
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
@@ -106,209 +297,116 @@ export default function MessageDetail() {
 
     setMessages([...messages, newMessage]);
     setMessageText('');
+
+    // Scroll to bottom after sending
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Chat Header */}
-      <View style={styles.chatHeader}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </Pressable>
-        <View style={styles.chatHeaderInfo}>
-          <Text style={styles.chatHeaderName}>{conversationName}</Text>
-          <Text style={styles.chatHeaderPlatform}>{conversationPlatform}</Text>
-        </View>
-      </View>
+  React.useEffect(() => {
+    // Scroll to bottom when messages change
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages]);
 
-      {/* Messages Container */}
-      <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
-        {messages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageRow,
-              message.isSent ? styles.messageRowSent : styles.messageRowReceived,
-            ]}>
-            <View
-              style={[
-                styles.messageBubble,
-                message.isSent ? styles.messageBubbleSent : styles.messageBubbleReceived,
-              ]}>
-              <Text
-                style={[
-                  styles.messageText,
-                  message.isSent ? styles.messageTextSent : styles.messageTextReceived,
-                ]}>
-                {message.text}
-              </Text>
-              <Text
-                style={[
-                  styles.messageTime,
-                  message.isSent ? styles.messageTimeSent : styles.messageTimeReceived,
-                ]}>
-                {message.time}
+  return (
+    <SafeAreaView style={dynamicStyles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={dynamicStyles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+        {/* Chat Header */}
+        <View style={dynamicStyles.chatHeader}>
+          <Pressable onPress={() => navigation.goBack()} style={dynamicStyles.backButton}>
+            <ArrowLeft size={20} color={theme.colors.text} strokeWidth={2.5} />
+          </Pressable>
+          <View style={dynamicStyles.chatHeaderCenter}>
+            <View style={dynamicStyles.avatar}>
+              <Text style={dynamicStyles.avatarText}>
+                {conversationName.charAt(0).toUpperCase()}
               </Text>
             </View>
+            <View style={dynamicStyles.chatHeaderInfo}>
+              <Text style={dynamicStyles.chatHeaderName}>{conversationName}</Text>
+              <Text style={dynamicStyles.chatHeaderPlatform}>{conversationPlatform}</Text>
+            </View>
           </View>
-        ))}
-      </ScrollView>
+          <View style={dynamicStyles.platformIconContainer}>
+            {getPlatformIcon(conversationPlatform)}
+          </View>
+        </View>
 
-      {/* Input Area */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Message"
-          placeholderTextColor="#999"
-          value={messageText}
-          onChangeText={setMessageText}
-          multiline
-          maxLength={1000}
-        />
-        <Pressable
-          style={[styles.sendButton, !messageText.trim() && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={!messageText.trim()}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </Pressable>
-      </View>
+        {/* Messages Container */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={dynamicStyles.messagesContainer}
+          contentContainerStyle={dynamicStyles.messagesContent}
+          keyboardShouldPersistTaps="handled">
+          {messages.map((message) => (
+            <View
+              key={message.id}
+              style={[
+                dynamicStyles.messageRow,
+                message.isSent ? dynamicStyles.messageRowSent : dynamicStyles.messageRowReceived,
+              ]}>
+              <View
+                style={[
+                  dynamicStyles.messageBubble,
+                  message.isSent
+                    ? dynamicStyles.messageBubbleSent
+                    : dynamicStyles.messageBubbleReceived,
+                ]}>
+                <Text
+                  style={[
+                    dynamicStyles.messageText,
+                    message.isSent
+                      ? dynamicStyles.messageTextSent
+                      : dynamicStyles.messageTextReceived,
+                  ]}>
+                  {message.text}
+                </Text>
+                <Text
+                  style={[
+                    dynamicStyles.messageTime,
+                    message.isSent
+                      ? dynamicStyles.messageTimeSent
+                      : dynamicStyles.messageTimeReceived,
+                  ]}>
+                  {message.time}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Input Area */}
+        <View style={dynamicStyles.inputContainer}>
+          <TextInput
+            style={dynamicStyles.input}
+            placeholder="Message"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={1000}
+          />
+          <Pressable
+            style={[
+              dynamicStyles.sendButton,
+              !messageText.trim() && dynamicStyles.sendButtonDisabled,
+            ]}
+            onPress={sendMessage}
+            disabled={!messageText.trim()}>
+            <Send
+              size={20}
+              color={messageText.trim() ? theme.colors.background : theme.colors.textTertiary}
+              strokeWidth={2.5}
+            />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#201f1f',
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    backgroundColor: '#201f1f',
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#ede9e9',
-    fontWeight: '600',
-  },
-  chatHeaderInfo: {
-    flex: 1,
-  },
-  chatHeaderName: {
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-  },
-  chatHeaderPlatform: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-    marginTop: 2,
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: '#201f1f',
-  },
-  messagesContent: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  messageRow: {
-    marginBottom: 12,
-    flexDirection: 'row',
-  },
-  messageRowSent: {
-    justifyContent: 'flex-end',
-  },
-  messageRowReceived: {
-    justifyContent: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '75%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  messageBubbleSent: {
-    backgroundColor: '#ede9e9',
-    borderBottomRightRadius: 4,
-  },
-  messageBubbleReceived: {
-    backgroundColor: '#2a2a2a',
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  messageText: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Regular',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  messageTextSent: {
-    color: '#201f1f',
-  },
-  messageTextReceived: {
-    color: '#ede9e9',
-  },
-  messageTime: {
-    fontSize: 11,
-    fontFamily: 'OpenSans-Regular',
-    alignSelf: 'flex-end',
-  },
-  messageTimeSent: {
-    color: 'rgba(32, 31, 31, 0.7)',
-  },
-  messageTimeReceived: {
-    color: '#999',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    backgroundColor: '#201f1f',
-    gap: 12,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    fontFamily: 'OpenSans-Regular',
-    color: '#ede9e9',
-    maxHeight: 100,
-    backgroundColor: '#2a2a2a',
-  },
-  sendButton: {
-    backgroundColor: '#ede9e9',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#333',
-    opacity: 0.5,
-  },
-  sendButtonText: {
-    color: '#201f1f',
-    fontSize: 16,
-    fontFamily: 'OpenSans-Bold',
-    fontWeight: '700',
-  },
-});

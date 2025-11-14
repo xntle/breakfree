@@ -15,7 +15,7 @@ export default function MessagesStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#201f1f' },
+        contentStyle: { backgroundColor: '#050505' },
       }}>
       <Stack.Screen name="MessagesList" component={MessagesList} />
       <Stack.Screen name="MessageDetail" component={MessageDetail} />
