@@ -1,0 +1,70 @@
+# Breakfree - React Native/Expo App
+
+## Project Structure
+
+- React Native app using Expo
+- TypeScript
+- React Navigation (Stack & Bottom Tabs)
+- NativeWind for styling (Tailwind CSS)
+- Lucide React Native for icons
+
+## Code Style
+
+- Use TypeScript with strict typing
+- Use functional components with hooks
+- Follow React Native best practices
+- Use StyleSheet.create for styles
+- Prefer named exports for components
+- Use camelCase for variables and functions
+- Use PascalCase for components
+
+## Design Principles
+
+- Dark theme (black background #000, white text #fff)
+- Minimal, clean black and white design
+- Mobile-optimized with max-width constraints (max-w-md equivalent: 448px)
+- Use Lucide React Native icons
+- Consistent spacing and typography
+
+## File Organization
+
+- `(onboard)/` - Onboarding flow screens
+- `(start)/` - Initial welcome screens
+- `(main)/` - Main app screens with bottom tab navigation
+- `(main)/screens/` - Individual screen components
+- Shared UI components in `(onboard)/ui.tsx`
+
+## Navigation
+
+- Stack navigator for onboarding and main app transition
+- Bottom tab navigator for main app (Home, Focus, Messages, Insights, Me)
+- Use React Navigation types (RootNav, etc.)
+
+## State Management
+
+- Context API for onboarding state (OnboardingContext)
+- AsyncStorage for persistence
+- Local state with useState for component-specific state
+
+## Styling
+
+- Dark theme: #201f1f backgrounds, #ede9e9 text
+- Use consistent spacing (8, 12, 16, 20, 24px)
+- Border radius: 10-20px for rounded elements
+
+## Icons
+
+- Use Lucide React Native icons
+- Import from 'lucide-react-native'
+- Icons should be white (#fff) on dark backgrounds
+- Size: typically 18-24px
+
+## Best Practices
+
+- read docs: https://docs.expo.dev/
+- Always type props and state
+- Use React.useMemo for expensive computations
+- Keep components focused and single-purpose
+- Extract reusable UI components
+- Handle edge cases and loading states
+- Use SafeAreaView for proper spacing on devices
