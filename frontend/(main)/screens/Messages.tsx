@@ -80,15 +80,15 @@ const MOCK_CHAT_MESSAGES: ChatMessage[] = [
 const getPlatformIcon = (platform: string) => {
   const platformLower = platform.toLowerCase();
   if (platformLower.includes('imessage') || platformLower.includes('message')) {
-    return <MessageCircle size={12} color="#201f1f" strokeWidth={2.5} />;
+    return <MessageCircle size={12} color="#050505" strokeWidth={2.5} />;
   }
   if (platformLower.includes('whatsapp')) {
-    return <MessageSquare size={12} color="#201f1f" strokeWidth={2.5} />;
+    return <MessageSquare size={12} color="#050505" strokeWidth={2.5} />;
   }
   if (platformLower.includes('telegram')) {
-    return <MessageCircle size={12} color="#201f1f" strokeWidth={2.5} />;
+    return <MessageCircle size={12} color="#050505" strokeWidth={2.5} />;
   }
-  return <MessageCircle size={12} color="#201f1f" strokeWidth={2.5} />;
+  return <MessageCircle size={12} color="#050505" strokeWidth={2.5} />;
 };
 
 export default function Messages() {
@@ -350,7 +350,7 @@ export default function Messages() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   header: {
     flexDirection: 'row',
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 8,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   filterChip: {
     paddingHorizontal: 16,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   filterChipTextActive: {
-    color: '#201f1f',
+    color: '#050505',
   },
   conversationsList: {
     flex: 1,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',
-    color: '#201f1f',
+    color: '#050505',
   },
   platformBadge: {
     position: 'absolute',
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: '#ede9e9',
     borderWidth: 2,
-    borderColor: '#201f1f',
+    borderColor: '#050505',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',
-    color: '#201f1f',
+    color: '#050505',
   },
   conversationPlatform: {
     fontSize: 11,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   backButton: {
     padding: 8,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   messagesContent: {
     padding: 16,
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageTextSent: {
-    color: '#201f1f',
+    color: '#050505',
   },
   messageTextReceived: {
     color: '#ede9e9',
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: '#333',
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
     gap: 12,
   },
   input: {
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    color: '#201f1f',
+    color: '#050505',
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
     borderRadius: 12,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   addOptionIcon: {
     width: 48,

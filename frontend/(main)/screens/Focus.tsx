@@ -139,7 +139,7 @@ export default function Focus() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#201f1f',
+    backgroundColor: '#050505',
   },
   scrollContent: {
     padding: 20,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderColor: '#ede9e9',
   },
   buttonText: {
-    color: '#201f1f',
+    color: '#050505',
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   startButtonText: {
-    color: '#201f1f',
+    color: '#050505',
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'OpenSans-Bold',

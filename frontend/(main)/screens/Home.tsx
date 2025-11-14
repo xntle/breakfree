@@ -1,8 +1,26 @@
 import * as React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, PanResponder } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  PanResponder,
+  Image,
+  Animated,
+  Easing,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { User } from 'lucide-react-native';
 import { useOnboard } from '(onboard)/OnboardingContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import type { RootStackParamList } from 'App';
+import type { MainTabParamList } from '../Tabs';
 
 type Challenge = {
   id: string;
@@ -80,7 +98,10 @@ const DISTRACTION_APPS = [
 ];
 
 export default function Home() {
+  const { theme } = useTheme();
   const { mode, blockedApps, setBlockedApps } = useOnboard();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const [activeTab, setActiveTab] = React.useState<TabType>('timer');
   const [showBlockedAppsModal, setShowBlockedAppsModal] = React.useState(false);
   const [sliderWidth, setSliderWidth] = React.useState(0);
@@ -90,6 +111,99 @@ export default function Home() {
   const [isRunning, setIsRunning] = React.useState(false);
   const [timeRemaining, setTimeRemaining] = React.useState(25 * 60); // 25 minutes in seconds
   const [selectedChallenge, setSelectedChallenge] = React.useState<Challenge | null>(null);
+
+  // Animation values for smooth transitions
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
+
+  // Animate tab transition
+  const animateTabChange = React.useCallback(
+    (newTab: TabType) => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: newTab === 'schedule' ? 20 : -20,
+          duration: 150,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setActiveTab(newTab);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 200,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    },
+    [fadeAnim, slideAnim]
+  );
+
+  // Swipe gesture for tab switching and navigation
+  const swipeResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          // Only respond to horizontal swipes (dx > dy and significant horizontal movement)
+          const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+          const isSignificant = Math.abs(gestureState.dx) > 15;
+
+          // Check if swipe starts from screen edges (left or right 50px) to avoid conflicts with ScrollViews
+          const screenWidth = Dimensions.get('window').width;
+          const startX = evt.nativeEvent.pageX || 0;
+          const isFromEdge = startX < 50 || startX > screenWidth - 50;
+
+          // Also check if the swipe is long enough and horizontal enough
+          const isLongSwipe = Math.abs(gestureState.dx) > 100;
+
+          return isHorizontal && isSignificant && (isFromEdge || isLongSwipe);
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          const { dx } = gestureState;
+          const swipeThreshold = 80; // Increased threshold to avoid conflicts
+
+          if (Math.abs(dx) > swipeThreshold) {
+            if (dx > 0) {
+              // Swipe right: go to Timer
+              if (activeTab === 'schedule') {
+                animateTabChange('timer');
+              }
+            } else {
+              // Swipe left
+              if (activeTab === 'timer') {
+                animateTabChange('schedule');
+              } else if (activeTab === 'schedule') {
+                // Navigate to Messages tab with smooth transition
+                Animated.timing(fadeAnim, {
+                  toValue: 0,
+                  duration: 200,
+                  easing: Easing.out(Easing.ease),
+                  useNativeDriver: true,
+                }).start(() => {
+                  tabNavigation.navigate('Messages');
+                });
+              }
+            }
+          }
+        },
+      }),
+    [activeTab, tabNavigation, animateTabChange, fadeAnim]
+  );
 
   React.useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -154,15 +268,491 @@ export default function Home() {
   const getChallengeColor = (type: string) => {
     switch (type) {
       case 'deep':
-        return '#ede9e9';
+        return theme.colors.text;
       case 'monk':
-        return '#999';
+        return theme.colors.textSecondary;
       case 'break':
-        return '#666';
+        return theme.colors.textTertiary;
       default:
-        return '#ede9e9';
+        return theme.colors.text;
     }
   };
+
+  // Generate dynamic styles based on theme
+  const dynamicStyles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        },
+        headerBlur: {
+          overflow: 'hidden',
+        },
+        header: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingVertical: 8,
+          backgroundColor: theme.colors.blurBackground,
+        },
+        profileButtonBlur: {
+          borderRadius: 16,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        profileButton: {
+          width: 32,
+          height: 32,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        tabsBlur: {
+          overflow: 'hidden',
+        },
+        tabsContainer: {
+          flexDirection: 'row',
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 6,
+          gap: 0,
+          backgroundColor: theme.colors.blurBackground,
+        },
+        tab: {
+          flex: 1,
+          paddingVertical: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderBottomWidth: 2,
+          borderBottomColor: 'transparent',
+          backgroundColor: 'transparent',
+        },
+        tabActive: {
+          borderBottomColor: theme.colors.text,
+        },
+        tabText: {
+          fontSize: 14,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.textTertiary,
+        },
+        tabTextActive: {
+          color: theme.colors.text,
+          fontFamily: 'OpenSans-Bold',
+        },
+        blockedBannerBlur: {
+          overflow: 'hidden',
+        },
+        blockedBanner: {
+          paddingVertical: 8,
+          paddingHorizontal: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.blurSurface,
+        },
+        blockedBannerContent: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+        },
+        blockedIconsContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+        },
+        blockedIcon: {
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: theme.colors.surfaceSecondary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        blockedIconEmoji: {
+          fontSize: 14,
+        },
+        blockedBannerRemaining: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.textSecondary,
+        },
+        blockedBannerText: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.text,
+        },
+        contentContainer: {
+          flex: 1,
+        },
+        animatedContent: {
+          flex: 1,
+        },
+        scrollContent: {
+          padding: 20,
+          paddingBottom: 100,
+          maxWidth: 448,
+          alignSelf: 'center',
+          width: '100%',
+        },
+        quoteContainer: {
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 24,
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+          overflow: 'hidden',
+        },
+        quoteText: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.text,
+          fontStyle: 'italic',
+          textAlign: 'center',
+          lineHeight: 24,
+        },
+        timerContainer: {
+          padding: 24,
+          marginBottom: 24,
+          alignItems: 'center',
+          backgroundColor: theme.colors.blurSurface,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+          overflow: 'hidden',
+        },
+        timerText: {
+          fontSize: 72,
+          fontFamily: 'OpenSans-ExtraBold',
+          fontWeight: '800',
+          color: theme.colors.text,
+          marginVertical: 16,
+          letterSpacing: -3,
+        },
+        timerButtons: {
+          flexDirection: 'row',
+          gap: 12,
+          width: '100%',
+          marginTop: 8,
+        },
+        timerButtonBlur: {
+          flex: 1,
+          borderRadius: 12,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.primaryLight,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        timerButton: {
+          flex: 1,
+          paddingVertical: 14,
+          alignItems: 'center',
+        },
+        timerButtonPause: {
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        timerButtonReset: {
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.textTertiary,
+        },
+        timerButtonText: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.background,
+          fontWeight: '700',
+        },
+        timerButtonTextPause: {
+          color: theme.colors.text,
+        },
+        timerButtonTextReset: {
+          color: theme.colors.textTertiary,
+        },
+        sliderContainer: {
+          width: '100%',
+          marginTop: 24,
+        },
+        sliderTrack: {
+          height: 4,
+          backgroundColor: theme.colors.surfaceSecondary,
+          borderRadius: 2,
+          position: 'relative',
+          marginBottom: 8,
+        },
+        sliderFill: {
+          height: '100%',
+          backgroundColor: theme.colors.text,
+          borderRadius: 2,
+          position: 'absolute',
+          left: 0,
+          top: 0,
+        },
+        sliderThumb: {
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: theme.colors.text,
+          position: 'absolute',
+          top: -8,
+          marginLeft: -10,
+          borderWidth: 2,
+          borderColor: theme.colors.background,
+        },
+        sliderLabels: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          paddingHorizontal: 4,
+        },
+        sliderLabel: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+        },
+        challengesContainer: {
+          marginBottom: 24,
+        },
+        sectionTitle: {
+          fontSize: 20,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+          marginBottom: 12,
+        },
+        challengesScroll: {
+          marginHorizontal: -20,
+          paddingHorizontal: 20,
+        },
+        challengeCardBlur: {
+          borderRadius: 16,
+          marginRight: 12,
+          width: 160,
+          minHeight: 120,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        challengeCardSelected: {
+          borderColor: theme.colors.text,
+          borderWidth: 2,
+        },
+        challengeCard: {
+          padding: 16,
+        },
+        challengeName: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Bold',
+          marginBottom: 4,
+        },
+        challengeDescription: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+          marginBottom: 8,
+        },
+        challengeDuration: {
+          fontSize: 14,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.text,
+          marginTop: 'auto',
+        },
+        scheduleContainer: {
+          paddingTop: 20,
+        },
+        scheduleTitle: {
+          fontSize: 24,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+          marginBottom: 4,
+        },
+        scheduleSubtitle: {
+          fontSize: 14,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+          marginBottom: 24,
+        },
+        scheduleList: {
+          marginBottom: 24,
+        },
+        scheduleItemBlur: {
+          borderRadius: 16,
+          marginBottom: 12,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        scheduleItem: {
+          flexDirection: 'row',
+          padding: 16,
+        },
+        scheduleTime: {
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 16,
+          minWidth: 60,
+        },
+        scheduleTimeText: {
+          fontSize: 20,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+        },
+        scheduleTimeLabel: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+          marginTop: 2,
+        },
+        scheduleContent: {
+          flex: 1,
+        },
+        scheduleItemTitle: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+          marginBottom: 4,
+        },
+        scheduleItemDescription: {
+          fontSize: 14,
+          fontFamily: 'OpenSans-Regular',
+          color: theme.colors.textSecondary,
+        },
+        addScheduleButtonBlur: {
+          borderRadius: 16,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+          borderStyle: 'dashed',
+        },
+        addScheduleButton: {
+          padding: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        addScheduleButtonText: {
+          fontSize: 16,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.textSecondary,
+        },
+        modalOverlay: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'flex-end',
+        },
+        modalContent: {
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          maxHeight: '80%',
+          overflow: 'hidden',
+          backgroundColor: theme.colors.blurBackground,
+        },
+        modalContentInner: {
+          paddingTop: 20,
+          paddingBottom: 40,
+        },
+        modalHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingBottom: 20,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+        modalTitle: {
+          fontSize: 24,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+        },
+        closeButton: {
+          width: 32,
+          height: 32,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        closeButtonText: {
+          fontSize: 28,
+          color: theme.colors.text,
+        },
+        modalScroll: {
+          maxHeight: 500,
+        },
+        appsGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          padding: 20,
+          gap: 12,
+        },
+        appChipBlur: {
+          borderRadius: 12,
+          overflow: 'hidden',
+          minWidth: '45%',
+          backgroundColor: theme.colors.blurSurface,
+          borderWidth: 1,
+          borderColor: theme.colors.blurBorder,
+        },
+        appChipBlocked: {
+          borderColor: theme.colors.text,
+          backgroundColor: theme.colors.surfaceSecondary,
+        },
+        appChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: 12,
+          position: 'relative',
+        },
+        appEmoji: {
+          fontSize: 20,
+          marginRight: 8,
+        },
+        appLabel: {
+          fontSize: 14,
+          fontFamily: 'OpenSans-Medium',
+          color: theme.colors.text,
+          flex: 1,
+        },
+        appLabelBlocked: {
+          fontFamily: 'OpenSans-Bold',
+        },
+        blockedIndicator: {
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: theme.colors.text,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: 8,
+        },
+        blockedIndicatorText: {
+          fontSize: 12,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.background,
+        },
+        logoText: {
+          fontSize: 18,
+          fontFamily: 'OpenSans-Bold',
+          color: theme.colors.text,
+          fontWeight: '700',
+        },
+        headerLeft: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        logo: {
+          width: 24,
+          height: 24,
+          resizeMode: 'contain',
+        },
+      }),
+    [theme]
+  );
 
   const toggleAppBlock = (appId: string) => {
     if (blockedApps.includes(appId)) {
@@ -206,22 +796,22 @@ export default function Home() {
   const renderTimerView = () => (
     <>
       {/* Inspirational Quote */}
-      <View style={styles.quoteContainer}>
-        <Text style={styles.quoteText}>"{quote}"</Text>
-      </View>
+      <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.quoteContainer}>
+        <Text style={dynamicStyles.quoteText}>"{quote}"</Text>
+      </BlurView>
 
       {/* Pomodoro Timer */}
-      <View style={styles.timerContainer}>
-        <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
+      <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.timerContainer}>
+        <Text style={dynamicStyles.timerText}>{formatTime(timeRemaining)}</Text>
         {!isRunning && (
           <View
-            style={styles.sliderContainer}
+            style={dynamicStyles.sliderContainer}
             onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
             {...panResponder.panHandlers}>
-            <View style={styles.sliderTrack}>
+            <View style={dynamicStyles.sliderTrack}>
               <View
                 style={[
-                  styles.sliderFill,
+                  dynamicStyles.sliderFill,
                   {
                     width: `${((timeRemaining / 60 - 1) / 479) * 100}%`,
                   },
@@ -229,117 +819,140 @@ export default function Home() {
               />
               <View
                 style={[
-                  styles.sliderThumb,
+                  dynamicStyles.sliderThumb,
                   {
                     left: `${((timeRemaining / 60 - 1) / 479) * 100}%`,
                   },
                 ]}
               />
             </View>
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabel}>1m</Text>
-              <Text style={styles.sliderLabel}>8h</Text>
+            <View style={dynamicStyles.sliderLabels}>
+              <Text style={dynamicStyles.sliderLabel}>1m</Text>
+              <Text style={dynamicStyles.sliderLabel}>8h</Text>
             </View>
           </View>
         )}
-        <View style={styles.timerButtons}>
+        <View style={dynamicStyles.timerButtons}>
           {!isRunning ? (
-            <Pressable style={styles.timerButton} onPress={handleStart}>
-              <Text style={styles.timerButtonText}>Start</Text>
-            </Pressable>
+            <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.timerButtonBlur}>
+              <Pressable style={dynamicStyles.timerButton} onPress={handleStart}>
+                <Text style={dynamicStyles.timerButtonText}>Start</Text>
+              </Pressable>
+            </BlurView>
           ) : (
             <>
-              <Pressable
-                style={[styles.timerButton, styles.timerButtonPause]}
-                onPress={handlePause}>
-                <Text style={[styles.timerButtonText, styles.timerButtonTextPause]}>Pause</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.timerButton, styles.timerButtonReset]}
-                onPress={handleReset}>
-                <Text style={[styles.timerButtonText, styles.timerButtonTextReset]}>Reset</Text>
-              </Pressable>
+              <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.timerButtonBlur}>
+                <Pressable
+                  style={[dynamicStyles.timerButton, dynamicStyles.timerButtonPause]}
+                  onPress={handlePause}>
+                  <Text style={[dynamicStyles.timerButtonText, dynamicStyles.timerButtonTextPause]}>
+                    Pause
+                  </Text>
+                </Pressable>
+              </BlurView>
+              <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.timerButtonBlur}>
+                <Pressable
+                  style={[dynamicStyles.timerButton, dynamicStyles.timerButtonReset]}
+                  onPress={handleReset}>
+                  <Text style={[dynamicStyles.timerButtonText, dynamicStyles.timerButtonTextReset]}>
+                    Reset
+                  </Text>
+                </Pressable>
+              </BlurView>
             </>
           )}
         </View>
-      </View>
-
-      {/* Apps Blocked Banner */}
-      <Pressable
-        onPress={() => setShowBlockedAppsModal(true)}
-        style={[
-          styles.appsBlockedBanner,
-          blockedApps.length === 0 && styles.appsBlockedBannerEmpty,
-        ]}>
-        <Text style={styles.appsBlockedText}>
-          {blockedApps.length > 0
-            ? `${blockedApps.length} app${blockedApps.length > 1 ? 's' : ''} blocked`
-            : 'Manage blocked apps'}
-        </Text>
-      </Pressable>
+      </BlurView>
 
       {/* Blocked Apps Modal */}
       {showBlockedAppsModal && (
-        <Pressable style={styles.modalOverlay} onPress={() => setShowBlockedAppsModal(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Blocked Apps</Text>
-              <Pressable onPress={() => setShowBlockedAppsModal(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>×</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              <View style={styles.appsGrid}>
-                {DISTRACTION_APPS.map((app) => {
-                  const isBlocked = blockedApps.includes(app.id);
-                  return (
-                    <Pressable
-                      key={app.id}
-                      style={[styles.appChip, isBlocked && styles.appChipBlocked]}
-                      onPress={() => toggleAppBlock(app.id)}>
-                      <Text style={styles.appEmoji}>{app.emoji}</Text>
-                      <Text style={[styles.appLabel, isBlocked && styles.appLabelBlocked]}>
-                        {app.label}
-                      </Text>
-                      {isBlocked && (
-                        <View style={styles.blockedIndicator}>
-                          <Text style={styles.blockedIndicatorText}>✓</Text>
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                })}
+        <Pressable
+          style={dynamicStyles.modalOverlay}
+          onPress={() => setShowBlockedAppsModal(false)}>
+          <BlurView intensity={80} tint={theme.mode} style={dynamicStyles.modalContent}>
+            <Pressable onPress={(e) => e.stopPropagation()} style={dynamicStyles.modalContentInner}>
+              <View style={dynamicStyles.modalHeader}>
+                <Text style={dynamicStyles.modalTitle}>Blocked Apps</Text>
+                <Pressable
+                  onPress={() => setShowBlockedAppsModal(false)}
+                  style={dynamicStyles.closeButton}>
+                  <Text style={dynamicStyles.closeButtonText}>×</Text>
+                </Pressable>
               </View>
-            </ScrollView>
-          </Pressable>
+              <ScrollView style={dynamicStyles.modalScroll} showsVerticalScrollIndicator={false}>
+                <View style={dynamicStyles.appsGrid}>
+                  {DISTRACTION_APPS.map((app) => {
+                    const isBlocked = blockedApps.includes(app.id);
+                    return (
+                      <BlurView
+                        key={app.id}
+                        intensity={60}
+                        tint={theme.mode}
+                        style={[
+                          dynamicStyles.appChipBlur,
+                          isBlocked && dynamicStyles.appChipBlocked,
+                        ]}>
+                        <Pressable
+                          style={dynamicStyles.appChip}
+                          onPress={() => toggleAppBlock(app.id)}>
+                          <Text style={dynamicStyles.appEmoji}>{app.emoji}</Text>
+                          <Text
+                            style={[
+                              dynamicStyles.appLabel,
+                              isBlocked && dynamicStyles.appLabelBlocked,
+                            ]}>
+                            {app.label}
+                          </Text>
+                          {isBlocked && (
+                            <View style={dynamicStyles.blockedIndicator}>
+                              <Text style={dynamicStyles.blockedIndicatorText}>✓</Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      </BlurView>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </Pressable>
+          </BlurView>
         </Pressable>
       )}
 
       {/* Quick Start Challenges */}
-      <View style={styles.challengesContainer}>
-        <Text style={styles.sectionTitle}>Quick Start Challenges</Text>
+      <View style={dynamicStyles.challengesContainer}>
+        <Text style={dynamicStyles.sectionTitle}>Quick Start Challenges</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.challengesScroll}>
+          style={dynamicStyles.challengesScroll}>
           {QUICK_START_CHALLENGES.map((challenge) => (
-            <Pressable
+            <BlurView
               key={challenge.id}
+              intensity={60}
+              tint={theme.mode}
               style={[
-                styles.challengeCard,
-                selectedChallenge?.id === challenge.id && styles.challengeCardSelected,
-              ]}
-              onPress={() => handleChallengePress(challenge)}>
-              <Text style={[styles.challengeName, { color: getChallengeColor(challenge.type) }]}>
-                {challenge.name}
-              </Text>
-              <Text style={styles.challengeDescription}>{challenge.description}</Text>
-              <Text style={styles.challengeDuration}>
-                {challenge.duration >= 60
-                  ? `${Math.floor(challenge.duration / 60)}h ${challenge.duration % 60}m`
-                  : `${challenge.duration}m`}
-              </Text>
-            </Pressable>
+                dynamicStyles.challengeCardBlur,
+                selectedChallenge?.id === challenge.id && dynamicStyles.challengeCardSelected,
+              ]}>
+              <Pressable
+                style={dynamicStyles.challengeCard}
+                onPress={() => handleChallengePress(challenge)}>
+                <Text
+                  style={[
+                    dynamicStyles.challengeName,
+                    { color: getChallengeColor(challenge.type) },
+                  ]}>
+                  {challenge.name}
+                </Text>
+                <Text style={dynamicStyles.challengeDescription}>{challenge.description}</Text>
+                <Text style={dynamicStyles.challengeDuration}>
+                  {challenge.duration >= 60
+                    ? `${Math.floor(challenge.duration / 60)}h ${challenge.duration % 60}m`
+                    : `${challenge.duration}m`}
+                </Text>
+              </Pressable>
+            </BlurView>
           ))}
         </ScrollView>
       </View>
@@ -348,542 +961,173 @@ export default function Home() {
 
   const renderScheduleView = () => (
     <>
-      <View style={styles.scheduleContainer}>
-        <Text style={styles.scheduleTitle}>Today's Schedule</Text>
-        <Text style={styles.scheduleSubtitle}>Plan your focus sessions</Text>
+      <View style={dynamicStyles.scheduleContainer}>
+        <Text style={dynamicStyles.scheduleTitle}>Today's Schedule</Text>
+        <Text style={dynamicStyles.scheduleSubtitle}>Plan your focus sessions</Text>
 
         {/* Schedule Items */}
-        <View style={styles.scheduleList}>
-          <View style={styles.scheduleItem}>
-            <View style={styles.scheduleTime}>
-              <Text style={styles.scheduleTimeText}>09:00</Text>
-              <Text style={styles.scheduleTimeLabel}>AM</Text>
+        <View style={dynamicStyles.scheduleList}>
+          <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.scheduleItemBlur}>
+            <View style={dynamicStyles.scheduleItem}>
+              <View style={dynamicStyles.scheduleTime}>
+                <Text style={dynamicStyles.scheduleTimeText}>09:00</Text>
+                <Text style={dynamicStyles.scheduleTimeLabel}>AM</Text>
+              </View>
+              <View style={dynamicStyles.scheduleContent}>
+                <Text style={dynamicStyles.scheduleItemTitle}>Deep Work Session</Text>
+                <Text style={dynamicStyles.scheduleItemDescription}>2 hours focused work</Text>
+              </View>
             </View>
-            <View style={styles.scheduleContent}>
-              <Text style={styles.scheduleItemTitle}>Deep Work Session</Text>
-              <Text style={styles.scheduleItemDescription}>2 hours focused work</Text>
-            </View>
-          </View>
+          </BlurView>
 
-          <View style={styles.scheduleItem}>
-            <View style={styles.scheduleTime}>
-              <Text style={styles.scheduleTimeText}>11:00</Text>
-              <Text style={styles.scheduleTimeLabel}>AM</Text>
+          <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.scheduleItemBlur}>
+            <View style={dynamicStyles.scheduleItem}>
+              <View style={dynamicStyles.scheduleTime}>
+                <Text style={dynamicStyles.scheduleTimeText}>11:00</Text>
+                <Text style={dynamicStyles.scheduleTimeLabel}>AM</Text>
+              </View>
+              <View style={dynamicStyles.scheduleContent}>
+                <Text style={dynamicStyles.scheduleItemTitle}>Short Break</Text>
+                <Text style={dynamicStyles.scheduleItemDescription}>20 minute recharge</Text>
+              </View>
             </View>
-            <View style={styles.scheduleContent}>
-              <Text style={styles.scheduleItemTitle}>Short Break</Text>
-              <Text style={styles.scheduleItemDescription}>20 minute recharge</Text>
-            </View>
-          </View>
+          </BlurView>
 
-          <View style={styles.scheduleItem}>
-            <View style={styles.scheduleTime}>
-              <Text style={styles.scheduleTimeText}>02:00</Text>
-              <Text style={styles.scheduleTimeLabel}>PM</Text>
+          <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.scheduleItemBlur}>
+            <View style={dynamicStyles.scheduleItem}>
+              <View style={dynamicStyles.scheduleTime}>
+                <Text style={dynamicStyles.scheduleTimeText}>02:00</Text>
+                <Text style={dynamicStyles.scheduleTimeLabel}>PM</Text>
+              </View>
+              <View style={dynamicStyles.scheduleContent}>
+                <Text style={dynamicStyles.scheduleItemTitle}>Pomodoro Sprint</Text>
+                <Text style={dynamicStyles.scheduleItemDescription}>25 minutes focused work</Text>
+              </View>
             </View>
-            <View style={styles.scheduleContent}>
-              <Text style={styles.scheduleItemTitle}>Pomodoro Sprint</Text>
-              <Text style={styles.scheduleItemDescription}>25 minutes focused work</Text>
-            </View>
-          </View>
+          </BlurView>
 
-          <View style={styles.scheduleItem}>
-            <View style={styles.scheduleTime}>
-              <Text style={styles.scheduleTimeText}>05:00</Text>
-              <Text style={styles.scheduleTimeLabel}>PM</Text>
+          <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.scheduleItemBlur}>
+            <View style={dynamicStyles.scheduleItem}>
+              <View style={dynamicStyles.scheduleTime}>
+                <Text style={dynamicStyles.scheduleTimeText}>05:00</Text>
+                <Text style={dynamicStyles.scheduleTimeLabel}>PM</Text>
+              </View>
+              <View style={dynamicStyles.scheduleContent}>
+                <Text style={dynamicStyles.scheduleItemTitle}>End of Day Review</Text>
+                <Text style={dynamicStyles.scheduleItemDescription}>Reflect on progress</Text>
+              </View>
             </View>
-            <View style={styles.scheduleContent}>
-              <Text style={styles.scheduleItemTitle}>End of Day Review</Text>
-              <Text style={styles.scheduleItemDescription}>Reflect on progress</Text>
-            </View>
-          </View>
+          </BlurView>
         </View>
 
-        <Pressable style={styles.addScheduleButton}>
-          <Text style={styles.addScheduleButtonText}>+ Add Schedule Item</Text>
-        </Pressable>
+        <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.addScheduleButtonBlur}>
+          <Pressable style={dynamicStyles.addScheduleButton}>
+            <Text style={dynamicStyles.addScheduleButtonText}>+ Add Schedule Item</Text>
+          </Pressable>
+        </BlurView>
       </View>
     </>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={dynamicStyles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.logoText}>breakfree</Text>
+      <BlurView intensity={80} tint={theme.mode} style={dynamicStyles.headerBlur}>
+        <View style={dynamicStyles.header}>
+          <View style={dynamicStyles.headerLeft}>
+            <Image source={require('../../assets/logo.png')} style={dynamicStyles.logo} />
+            <Text style={dynamicStyles.logoText}>breakfree</Text>
+          </View>
+          <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.profileButtonBlur}>
+            <Pressable
+              style={dynamicStyles.profileButton}
+              onPress={() => {
+                const parent = navigation.getParent();
+                if (parent) {
+                  (parent as any).navigate('Me');
+                }
+              }}>
+              <User size={20} color={theme.colors.text} strokeWidth={2} fill={theme.colors.text} />
+            </Pressable>
+          </BlurView>
         </View>
-        <Pressable style={styles.profileButton}>
-          <User size={20} color="#ede9e9" strokeWidth={2} fill="#ede9e9" />
-        </Pressable>
-      </View>
+      </BlurView>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <Pressable
-          style={[styles.tab, activeTab === 'timer' && styles.tabActive]}
-          onPress={() => setActiveTab('timer')}>
-          <Text style={[styles.tabText, activeTab === 'timer' && styles.tabTextActive]}>Timer</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.tab, activeTab === 'schedule' && styles.tabActive]}
-          onPress={() => setActiveTab('schedule')}>
-          <Text style={[styles.tabText, activeTab === 'schedule' && styles.tabTextActive]}>
-            Schedule
-          </Text>
-        </Pressable>
-      </View>
+      <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.tabsBlur}>
+        <View style={dynamicStyles.tabsContainer}>
+          <Pressable
+            style={[dynamicStyles.tab, activeTab === 'timer' && dynamicStyles.tabActive]}
+            onPress={() => animateTabChange('timer')}>
+            <Text
+              style={[dynamicStyles.tabText, activeTab === 'timer' && dynamicStyles.tabTextActive]}>
+              Timer
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[dynamicStyles.tab, activeTab === 'schedule' && dynamicStyles.tabActive]}
+            onPress={() => animateTabChange('schedule')}>
+            <Text
+              style={[
+                dynamicStyles.tabText,
+                activeTab === 'schedule' && dynamicStyles.tabTextActive,
+              ]}>
+              Schedule
+            </Text>
+          </Pressable>
+        </View>
+      </BlurView>
 
       {/* App Blocked Banner */}
       {(isRunning || blockedApps.length > 0) && (
-        <View style={styles.blockedBanner}>
-          <Text style={styles.blockedBannerText}>
-            🔒{' '}
-            {blockedApps.length > 0
-              ? `${blockedApps.length} app${blockedApps.length > 1 ? 's' : ''} blocked`
-              : 'Focus mode active'}
-          </Text>
-        </View>
+        <BlurView intensity={60} tint={theme.mode} style={dynamicStyles.blockedBannerBlur}>
+          <Pressable
+            onPress={() => setShowBlockedAppsModal(true)}
+            style={dynamicStyles.blockedBanner}>
+            <View style={dynamicStyles.blockedBannerContent}>
+              {blockedApps.length > 0 ? (
+                <>
+                  <View style={dynamicStyles.blockedIconsContainer}>
+                    {blockedApps.slice(0, 2).map((appId) => {
+                      const app = DISTRACTION_APPS.find((a) => a.id === appId);
+                      return app ? (
+                        <View key={appId} style={dynamicStyles.blockedIcon}>
+                          <Text style={dynamicStyles.blockedIconEmoji}>{app.emoji}</Text>
+                        </View>
+                      ) : null;
+                    })}
+                  </View>
+                  {blockedApps.length > 2 && (
+                    <Text style={dynamicStyles.blockedBannerRemaining}>
+                      +{blockedApps.length - 2}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={dynamicStyles.blockedBannerText}>🔒 Focus mode active</Text>
+              )}
+            </View>
+          </Pressable>
+        </BlurView>
       )}
 
       {/* Content */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {activeTab === 'timer' ? renderTimerView() : renderScheduleView()}
-      </ScrollView>
+      <View style={dynamicStyles.contentContainer} {...swipeResponder.panHandlers}>
+        <Animated.View
+          style={[
+            dynamicStyles.animatedContent,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateX: slideAnim }],
+            },
+          ]}>
+          <ScrollView
+            contentContainerStyle={dynamicStyles.scrollContent}
+            showsVerticalScrollIndicator={false}>
+            {activeTab === 'timer' ? renderTimerView() : renderScheduleView()}
+          </ScrollView>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#201f1f',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  headerLeft: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  logoText: {
-    fontSize: 18,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-    fontWeight: '700',
-  },
-  profileButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 6,
-    gap: 0,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: '#ede9e9',
-  },
-  tabText: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Medium',
-    color: '#666',
-  },
-  tabTextActive: {
-    color: '#ede9e9',
-    fontFamily: 'OpenSans-Bold',
-  },
-  blockedBanner: {
-    backgroundColor: '#2a2a2a',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  blockedBannerText: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Medium',
-    color: '#ede9e9',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-    maxWidth: 448,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  quoteContainer: {
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  quoteText: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Regular',
-    color: '#ede9e9',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  timerContainer: {
-    backgroundColor: 'transparent',
-    padding: 24,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  timerAdjustContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  timerAdjustButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  timerAdjustText: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-  },
-  timerAdjustTextDisabled: {
-    color: '#666',
-    opacity: 0.5,
-  },
-  timerText: {
-    fontSize: 72,
-    fontFamily: 'OpenSans-ExtraBold',
-    fontWeight: '800',
-    color: '#ede9e9',
-    marginVertical: 16,
-    letterSpacing: -3,
-  },
-  timerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-    marginTop: 8,
-  },
-  appsBlockedBanner: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  appsBlockedBannerEmpty: {
-    opacity: 0.6,
-  },
-  appsBlockedText: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Medium',
-    color: '#ede9e9',
-    textAlign: 'center',
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#201f1f',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButtonText: {
-    fontSize: 28,
-    color: '#ede9e9',
-  },
-  modalScroll: {
-    maxHeight: 500,
-  },
-  appsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 20,
-    gap: 12,
-  },
-  appChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    padding: 12,
-    minWidth: '45%',
-    position: 'relative',
-  },
-  appChipBlocked: {
-    borderColor: '#ede9e9',
-    backgroundColor: '#333',
-  },
-  appEmoji: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  appLabel: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Medium',
-    color: '#ede9e9',
-    flex: 1,
-  },
-  appLabelBlocked: {
-    fontFamily: 'OpenSans-Bold',
-  },
-  blockedIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ede9e9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  blockedIndicatorText: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Bold',
-    color: '#201f1f',
-  },
-  sliderContainer: {
-    width: '100%',
-    marginTop: 24,
-  },
-  sliderTrack: {
-    height: 4,
-    backgroundColor: '#333',
-    borderRadius: 2,
-    position: 'relative',
-    marginBottom: 8,
-  },
-  sliderFill: {
-    height: '100%',
-    backgroundColor: '#ede9e9',
-    borderRadius: 2,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  sliderThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ede9e9',
-    position: 'absolute',
-    top: -8,
-    marginLeft: -10,
-    borderWidth: 2,
-    borderColor: '#201f1f',
-  },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  sliderLabel: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-  },
-  timerButton: {
-    flex: 1,
-    backgroundColor: '#ede9e9',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  timerButtonPause: {
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#ede9e9',
-  },
-  timerButtonReset: {
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#666',
-  },
-  timerButtonText: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Bold',
-    color: '#201f1f',
-    fontWeight: '700',
-  },
-  timerButtonTextPause: {
-    color: '#ede9e9',
-  },
-  timerButtonTextReset: {
-    color: '#666',
-  },
-  challengesContainer: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-    marginBottom: 12,
-  },
-  challengesScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  challengeCard: {
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 12,
-    width: 160,
-    minHeight: 120,
-  },
-  challengeCardSelected: {
-    borderColor: '#ede9e9',
-    borderWidth: 2,
-  },
-  challengeName: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Bold',
-    marginBottom: 4,
-  },
-  challengeDescription: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-    marginBottom: 8,
-  },
-  challengeDuration: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Medium',
-    color: '#ede9e9',
-    marginTop: 'auto',
-  },
-  scheduleContainer: {
-    paddingTop: 20,
-  },
-  scheduleTitle: {
-    fontSize: 24,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-    marginBottom: 4,
-  },
-  scheduleSubtitle: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-    marginBottom: 24,
-  },
-  scheduleList: {
-    marginBottom: 24,
-  },
-  scheduleItem: {
-    flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  scheduleTime: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    minWidth: 60,
-  },
-  scheduleTimeText: {
-    fontSize: 20,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-  },
-  scheduleTimeLabel: {
-    fontSize: 12,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-    marginTop: 2,
-  },
-  scheduleContent: {
-    flex: 1,
-  },
-  scheduleItemTitle: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Bold',
-    color: '#ede9e9',
-    marginBottom: 4,
-  },
-  scheduleItemDescription: {
-    fontSize: 14,
-    fontFamily: 'OpenSans-Regular',
-    color: '#999',
-  },
-  addScheduleButton: {
-    backgroundColor: '#2a2a2a',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderStyle: 'dashed',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addScheduleButtonText: {
-    fontSize: 16,
-    fontFamily: 'OpenSans-Medium',
-    color: '#999',
-  },
-});
