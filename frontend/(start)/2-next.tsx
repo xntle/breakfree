@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Animated, Easing } from 'react-native';
+import { View, Text, Pressable, Animated, Easing, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { StatusBar } from 'expo-status-bar';
-import { Link } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { RootNav } from 'App';
 
-export default function Next() {
+export default function NextScreen() {
   const titleY = useRef(new Animated.Value(0)).current;
   const buttonsOpacity = useRef(new Animated.Value(0)).current;
   const buttonsY = useRef(new Animated.Value(16)).current;
   const [appleAvail, setAppleAvail] = useState(false);
+  const navigation = useNavigation<RootNav>();
 
   useEffect(() => {
     AppleAuthentication.isAvailableAsync()
@@ -43,13 +45,7 @@ export default function Next() {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#000000',
-      }}>
+    <View style={styles.container}>
       <StatusBar style="light" />
       <Animated.Text
         style={{
@@ -66,7 +62,7 @@ export default function Next() {
           fontSize: 16,
           fontWeight: '300',
           textAlign: 'center',
-          marginHorizontal: '16',
+          marginHorizontal: 16,
           transform: [{ translateY: titleY }],
         }}>
         block the noise, keep the texts
@@ -90,12 +86,26 @@ export default function Next() {
           />
         )}
 
-        <Pressable onPress={() => {}} style={{ alignItems: 'center', marginTop: 12 }}>
+        <Pressable
+          onPress={() => {
+            navigation.navigate('Intro');
+          }}
+          style={{ alignItems: 'center', marginTop: 12 }}>
           <Text style={{ color: '#9CA3AF', fontSize: 12 }}>
-            By signing in, you agree to our <Link href="/">Terms and Conditions</Link>
+            By signing in, you agree to our{' '}
+            <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>Terms and Conditions</Text>
           </Text>
         </Pressable>
       </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
